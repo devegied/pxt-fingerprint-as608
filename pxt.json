@@ -1,6 +1,6 @@
 {
     "name": "pxt-fingerprint-as608",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Makecode extension for Fingerprint scanner (AS608)",
     "license": "MIT",
     "dependencies": {
