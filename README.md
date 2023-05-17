@@ -1,6 +1,16 @@
 
 > Open this page at [https://devegied.github.io/pxt-fingerprint-as608/](https://devegied.github.io/pxt-fingerprint-as608/)
 
+# Fingerprint scanner
+
+Makecode extension for Fingerprint scanner based on AS608 chip.
+
+![](icon.png)
+
+I think there are several scanners based on AS608 chip with different firmware and they support different command sets. I got mine from [AliExpress](https://www.aliexpress.com/wholesale?catId=0&SearchText=FPM10A) for 5.5€ and it supports relatively wide command set.
+
+Scanner also works with [Adafruit libraries](https://learn.adafruit.com/adafruit-optical-fingerprint-sensor/) but after a lot of searching on Google for "光学指纹模块 用户手册" (*Optical Fingerprint Module User Manual* in Chinese) I found PDF document with `AutoLogin` and `AutoSearch` commands which combines 7 and 3 basic commands respectively and makes this device more accessible to beginners.
+
 ## Using fingerprint scanner with microbit
 
 **Important**: Acording to [micro:bit hardware specifications](https://tech.microbit.org/hardware/powersupply/) when v1 board is powered over USB it can provide only 90mA current for connected devices.
@@ -9,20 +19,8 @@ Micro:bit v2 board can provide up to 270mA current for external devices when pow
 
 ## Use as Extension
 
-This repository can be added as an **extension** in MakeCode.
-
-* open [https://makecode.microbit.org/](https://makecode.microbit.org/)
-* click on **New Project** or open existing project
-* click on **Extensions** under the gearwheel menu or in toolbox
-* search for **devegied/pxt-fingerprint-as608** and import
-
-## Edit this project
-
-To edit this repository in MakeCode.
-
-* open [https://makecode.microbit.org/](https://makecode.microbit.org/)
-* click on **Import** then click on **Import URL**
-* paste **https://github.com/devegied/pxt-fingerprint-as608** and click import
+In your micro:bit [Makecode](https://makecode.microbit.org/) project click on **Extensions** under the gearwheel menu or in toolbox,
+search for **devegied/pxt-fingerprint-as608** and import it.
 
 ## Simple API
 
@@ -30,7 +28,7 @@ To edit this repository in MakeCode.
 FingerprintAS608=github:devegied/pxt-fingerprint-as608
 ```
 ```sig
-FingerprintAS608.init(SerialPin.P1, SerialPin.P2)
+FingerprintAS608.init(SerialPin.P1, SerialPin.P2, FingerprintAS608.InitCmds.VerifyPasswordAndBacklightOff)
 ```
 Connect to fingerprint scanner on indicated pins and do selected operations
   - txpin microbit pin where scanner RX pin is connected, eg: SerialPin.P1
@@ -47,7 +45,7 @@ This image may take a few minutes to refresh.
 ![A rendered view of the blocks](https://github.com/devegied/pxt-fingerprint-as608/raw/master/.github/makecode/blocks.png)
 
 ```cards
-FingerprintAS608.init(SerialPin.P1, SerialPin.P2)
+FingerprintAS608.init(SerialPin.P1, SerialPin.P2, FingerprintAS608.InitCmds.VerifyPasswordAndBacklightOff)
 FingerprintAS608.onEvent(FingerprintAS608.ScannerEvents.Any, () => {
 
 })

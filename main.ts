@@ -21,10 +21,18 @@ namespace FingerprintAS608 {
         //% block="verify password"
         VerifyPassword = 2,
         //% block="handshake & verify password"
-        HandshakeAndVerifyPassword = 3
+        HandshakeAndVerifyPassword = 3,
+        //% block="turn backlight off"
+        BacklightOff = 4,
+        //% block="handshake & turn backlight off"
+        HandshakeAndBacklightOff = 5,
+        //% block="verify password & turn backlight off"
+        VerifyPasswordAndBacklightOff = 6,
+        //% block="handshake & verify password & turn backlight off"
+        HandshakeAndVerifyPasswordAndBacklightOff = 7
     }
     /**
-     * Fingerprint characteristics storage slot
+     * Fingerprint characteristic storage slot
      */
     export const enum Slots {
         //% block="CharBuffer1"
@@ -92,6 +100,7 @@ namespace FingerprintAS608 {
     //Hardcoded communication parameters
     let address: number = 0xFFFFFFFF
     let password: number = 0x00000000
+    const pauseMS: number = 200
     //Scanner parameters
     let scannerParameters: Parameters
     //Last response buffer
@@ -102,12 +111,12 @@ namespace FingerprintAS608 {
         eventHandlers.forEach((th) => { th.onEvent(event) })
     }
     /**
-     * Do something when scanner event occurs
+     * Do something when scanner error event occurs
      * @param event to be checked, eg: ScannerEvents.E1
      * @param handler code to run when the event is raised
      */
     //% blockId=FingerprintAS608_on_event
-    //% block="on scaner | %event"
+    //% block="on scanner $event"
     //% event.fieldEditor="gridpicker" event.fieldOptions.columns=2
     //% event.fieldOptions.tooltips="true"
     //% weight=65
@@ -133,7 +142,7 @@ namespace FingerprintAS608 {
             csum += cmd_buf[pos]
             pos++
         }
-        cmd_buf.setNumber(NumberFormat.UInt16BE, pos, csum) //Package checksum
+        cmd_buf.setNumber(NumberFormat.UInt16BE, pos, csum & 0xFFFF) //Package checksum
         serial.writeBuffer(cmd_buf)
     }
     /**
@@ -192,31 +201,30 @@ namespace FingerprintAS608 {
     //% weight=100
     //% txpin.fieldEditor="gridpicker" txpin.fieldOptions.columns=5
     //% rxpin.fieldEditor="gridpicker" rxpin.fieldOptions.columns=5
-    //% doCommands.defl=FingerprintAS608.InitCmds.VerifyPassword
+    //% doCommands.defl=FingerprintAS608.InitCmds.VerifyPasswordAndBacklightOff
     export function init(txpin: SerialPin, rxpin: SerialPin, doCommands?: InitCmds): void {
-        if (isNaN(doCommands)) doCommands = InitCmds.VerifyPassword //default value is only for GUI
+        if (isNaN(doCommands)) doCommands = InitCmds.VerifyPasswordAndBacklightOff //default value is only for GUI
         serial.redirect(txpin, rxpin, BaudRate.BaudRate57600)
-        basic.pause(1000)
+        basic.pause(500)
         if (doCommands & InitCmds.Handshake) {
             packAndSend(PID.CMD, [0x17, 0])//Handshake
-            receive()
-            if (respBuf[9] != 0)
+            if ((!receive())||(respBuf[9] != 0))
                 propagateEvent(_ScannerEvents.CommunicationError)
-            basic.pause(200)
+            basic.pause(pauseMS)
         }
         if (doCommands & InitCmds.VerifyPassword) {
             //Verify password with global bigendian value
             packAndSend(PID.CMD, [0x13, password & 0xFF000000 >> 24, password & 0x00FF0000 >> 16, password & 0x0000FF00 >> 8, password & 0x000000FF])
-            receive()
-            if (respBuf[9] != 0)
+            if ((!receive())||(respBuf[9] != 0))
                 propagateEvent(_ScannerEvents.CommunicationError)
-            basic.pause(200)
+            basic.pause(pauseMS)
         }
+        if (doCommands & InitCmds.BacklightOff)
+            setLight(false)
         packAndSend(PID.CMD, [0x0F])//Read system Parameters
-        receive()
-        if (respBuf[9] != 0)
+        if ((!receive())||(respBuf[9] != 0))
             propagateEvent(_ScannerEvents.CommunicationError)
-        basic.pause(200)
+        basic.pause(pauseMS)
         scannerParameters = {
             statusRegister: respBuf.getNumber(NumberFormat.UInt16BE, 10),//Status register in respBuf[10..11]
             systemIdentifier: respBuf.getNumber(NumberFormat.UInt16BE, 12),//System identifier code in respBuf[12..13]
@@ -229,49 +237,48 @@ namespace FingerprintAS608 {
     }
 
     /**
-     * Turn scanner light on or off
-     * @param state scanner light state
+     * Turn scanner backlight on or off
+     * @param state scanner backlight state
      */
-    //% blockId=FingerprintAS608_turnlight block="light $state"
+    //% blockId=FingerprintAS608_turnlight block="Backlight $state"
     //% weight=90
-    //% state.shadow="toggleOnOff"
+    //% state.shadow="toggleOnOff" state.defl=false
     export function setLight(state: boolean): void {
-        packAndSend(PID.CMD, [state ? 0x50 : 0x51])//Open/Close the fingerprint lighting background
-        receive()
-        if (respBuf[9] != 0)
+        packAndSend(PID.CMD, [state ? 0x50 : 0x51])//Open/Close the fingerprint background lighting
+        if ((!receive())||(respBuf[9] != 0))
             propagateEvent(_ScannerEvents.CommunicationError)
-        basic.pause(200)
+        basic.pause(pauseMS)
     }
 
     /**
      * Get number of fingerprint templates stored in the scanner
      * returns number of fingerprint templates stored in the scanner
      */
-    //% blockId=FingerprintAS608_gettemplcount block="stored template count"
+    //% blockId=FingerprintAS608_gettemplcount block="Stored template count"
     //% weight=80
     export function getTemplateCount(): number {
+        let rv: number = -1
         packAndSend(PID.CMD, [0x1D])//Read finger template count
-        receive()
-        basic.pause(200)
-        if (respBuf[9] == 0)
-            return respBuf.getNumber(NumberFormat.UInt16BE, 10)
-        else
+        if ((!receive()) || (respBuf[9] != 0))
             propagateEvent(_ScannerEvents.CommunicationError)
-        return -1
+        else
+            rv = respBuf.getNumber(NumberFormat.UInt16BE, 10)
+        basic.pause(pauseMS)
+        return rv
     }
 
     /**
      * Get storage positions of fingerprint templates in the scanner
      * returns array of fingerprint template positions in the scanner
      */
-    //% blockId=FingerprintAS608_gettemplpos block="stored template positions"
-    //% weight=80
+    //% blockId=FingerprintAS608_gettemplpos block="Stored template positions"
+    //% weight=70
     export function getTemplatePos(): number[] {
-        packAndSend(PID.CMD, [0x1F, 0x00])//Read finger template positions at bank #0
-        receive()
-        basic.pause(200)
-        if (respBuf[9] == 0) {
-            let rv: number[] = []
+        let rv: number[] = []
+        packAndSend(PID.CMD, [0x1F, 0x00])//Read finger template positions at bank #0 - first 256 positions
+        if ((!receive()) || (respBuf[9] != 0))
+            propagateEvent(_ScannerEvents.CommunicationError)
+        else {
             let bByte: number
             for (let b = 0; b < 32; b++) {
                 bByte = respBuf[10 + b]
@@ -279,119 +286,146 @@ namespace FingerprintAS608 {
                     if (bByte & (1 << bit))
                         rv.push(b * 8 + bit)
             }
-            return rv
-        } else
-            propagateEvent(_ScannerEvents.CommunicationError)
-        return []
+        }
+        basic.pause(pauseMS)
+        return rv
     }
 
     /**
-     * Detect finger and store finger image in ImageBuffer while
-     * If there is no finger, set relevant confirmation code
-     * returns true if finger image stored, false if finger not detected
+     * Immediately detects finger and stores finger image in ImageBuffer
+     * returns true if finger image stored, false on error
      */
     //% blockId=FingerprintAS608_genimg block="Scan finger"
-    //% weight=80
+    //% weight=100
     //% advanced = true
     export function genImg(): boolean {
         packAndSend(PID.CMD, [0x01])//collect finger image
-        receive()
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.FingerNotDetected)
-                return false;
+        if (!receive()) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.FingerNotDetected)
+                    return false;
+            }
         }
     }
     /**
-     * Generate characteristics file from scaned fingerprint
-     * returns true if file generated and stored, false otherwise
+     * Generate characteristic file from scanned fingerprint in ImageBuffer
+     * returns true if file generated and stored, false on error
      * @param slot to store generated file
      */
-    //% blockId=FingerprintAS608_img2char block="Generate characteristics in $slot"
+    //% blockId=FingerprintAS608_img2char block="Generate characteristic in $slot"
     //% slot.defl=FingerprintAS608.Slots.CharBuffer1
+    //% weight=90
     //% advanced = true
     export function img2Tz(slot: Slots): boolean {
         packAndSend(PID.CMD, [0x02, slot])//generate character file from image
-        receive()
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.NotAFingerprint)
-                return false;
+        if (!receive()) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.NotAFingerprint)
+                    return false;
+            }
         }
     }
     /**
      * Generate template from two stored characteristics
-     * returns true if template generated and stored, false otherwise
+     * returns true if template generated and stored, false on error
      */
     //% blockId=FingerprintAS608_regmodel block="Generate template"
+    //% weight=80
     //% advanced = true
     export function regModel(): boolean {
         packAndSend(PID.CMD, [0x05])//generate template
-        receive()
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.NotTheSame)
-                return false;
+        if (!receive()) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.NotTheSame)
+                    return false;
+            }
         }
     }
     /**
      * Save template to permanent storage
-     * returns true if template stored, false otherwise
+     * returns true if template stored, false on error
      * @param position of permanent storage to store template
      */
     //% blockId=FingerprintAS608_store block="Store template in scanner at $position"
-    //% position.min=0 position.max=149
+    //% weight=70
     //% advanced = true
     export function store(position: number): boolean {
         packAndSend(PID.CMD, [0x06, 0x01, (position >> 8) & 0xFF, position & 0xFF])//store template
-        receive()
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.SaveFailed)
-                return false;
+        if (!receive()) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.SaveFailed)
+                    return false;
+            }
         }
     }
 
     /**
      * Automaticaly get 2 fingerprint scans, convert them to characteristics, 
      * make template from them and save it to permanent storage
-     * returns true if template stored, false otherwise
+     * returns true if template stored, false on error
      * @param position of permanent storage to store template
      */
     //% blockId=FingerprintAS608_autoenroll block="Collect 2 fingerprints and store as template in scanner at $position"
-    //% position.min=0 position.max=149
-    //% advanced = true
+    //% weight=60
     export function autoEnroll(position: number): boolean {
         packAndSend(PID.CMD, [0x54, 0xFF, 0x02, (position >> 8) & 0xFF, position & 0xFF, 0x00])//AutoEnroll/Autologin (max wait time, two scans, do not allow to store duplicates)
-        receive(16000)
-        if (respBuf[9] == 0x56) { //scan of first finger successfuly collected
-            receive(16000)
+        if (!receive(16000)) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
         }
-        basic.pause(200)
+        if (respBuf[9] == 0x56) { //scan of first finger successfuly collected
+            if (!receive(16000)) {
+                propagateEvent(_ScannerEvents.CommunicationError)
+                basic.pause(pauseMS)
+                return false;
+            }
+        }
+        basic.pause(pauseMS)
         switch (respBuf[9]) {
             case 0x0:
                 return true;
@@ -422,121 +456,147 @@ namespace FingerprintAS608 {
 
     /**
      * Delete template from permanent storage
-     * returns true if template deleted, false otherwise
+     * returns true if template deleted, false on error
      * @param position of permanent storage to delete from
      */
     //% blockId=FingerprintAS608_delete block="Delete template from scanner at $position"
-    //% position.min=0 position.max=149
-    //% advanced = true
+    //% weight=50
     export function delTempl(position: number): boolean {
         packAndSend(PID.CMD, [0x0C, (position >> 8) & 0xFF, position & 0xFF, 0x01])//delete single template
-        receive()
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.DeleteFailed)
-                return false;
+        if (!receive()) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.DeleteFailed)
+                    return false;
+            }
         }
     }
 
     /**
-     * Search for matching stored template to the generated characteristics
-     * returns true if match found, false otherwise
+     * Search for matching stored template to the generated characteristic
+     * returns true if match found, false on error or no match
      * @param slot to compare to
      */
-    //% blockId=FingerprintAS608_search block="Search for matched template for characteristics in $slot"
+    //% blockId=FingerprintAS608_search block="Search for matched template for characteristic in $slot"
     //% slot.defl=FingerprintAS608.Slots.CharBuffer1
+    //% weight=50
     //% advanced = true
     export function search(slot: Slots): boolean {
         packAndSend(PID.CMD, [0x04, slot, 0x0, 0x0, (scannerParameters.librarySize >> 8) & 0xFF, scannerParameters.librarySize & 0xFF])//search finger library
-        receive()
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.NotFound)
-                return false;
+        if (!receive()) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.NotFound)
+                    return false;
+            }
         }
     }
 
     /**
-     * High speed search for matching stored template to the generated characteristics
-     * returns true if match found, false otherwise
+     * High speed search for matching stored template to the generated characteristic
+     * returns true if match found, false on error or no match
      * @param slot to compare to
      */
-    //% blockId=FingerprintAS608_fastsearch block="Fast search for matched template for characteristics in $slot"
+    //% blockId=FingerprintAS608_fastsearch block="Fast search for matched template for characteristic in $slot"
     //% slot.defl=FingerprintAS608.Slots.CharBuffer1
+    //% weight=40
     //% advanced = true
     export function fastSearch(slot: Slots): boolean {
         packAndSend(PID.CMD, [0x1B, slot, 0x0, 0x0, (scannerParameters.librarySize >> 8) & 0xFF, scannerParameters.librarySize & 0xFF])//search finger library
-        receive()
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.NotFound)
-                return false;
+        if (!receive()) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.NotFound)
+                    return false;
+            }
         }
     }
 
     /**
-     * Automatic search for matching stored template (scans fingerprint, creates characteristics, searches between stored templates)
-     * returns true if match found, false otherwise
+     * Automatic search for matching stored template (scans fingerprint, creates characteristic, searches for match in stored templates)
+     * returns true if match found, false on error or no match
      */
     //% blockId=FingerprintAS608_autosearch block="Collect fingerprint and search for it in stored templates"
-    //% advanced = true
+    //% weight=40
     export function autoSearch(): boolean {
         packAndSend(PID.CMD, [0x55, 0xFF, 0x00, 0x00, (scannerParameters.librarySize >> 8) & 0xFF, scannerParameters.librarySize & 0xFF])//autosearch
-        receive(16)
-        basic.pause(200)
-        switch (respBuf[9]) {
-            case 0x0:
-                return true;
-            case 0x1:
-                propagateEvent(_ScannerEvents.CommunicationError)
-                return false;
-            case 0x2:
-                propagateEvent(_ScannerEvents.FingerNotDetected)
-                return false;
-            case 0x6:
-            case 0x7:
-                propagateEvent(_ScannerEvents.NotAFingerprint)
-                return false;
-            case 0x23:
-            case 0x09:
-                propagateEvent(_ScannerEvents.NotFound)
-                return false;
-            default:
-                propagateEvent(_ScannerEvents.DirtyScanner)
-                return false;
+        if (!receive(16000)) {
+            propagateEvent(_ScannerEvents.CommunicationError)
+            basic.pause(pauseMS)
+            return false;
+        } else {
+            basic.pause(pauseMS)
+            switch (respBuf[9]) {
+                case 0x0:
+                    return true;
+                case 0x1:
+                    propagateEvent(_ScannerEvents.CommunicationError)
+                    return false;
+                case 0x2:
+                    propagateEvent(_ScannerEvents.FingerNotDetected)
+                    return false;
+                case 0x6:
+                case 0x7:
+                    propagateEvent(_ScannerEvents.NotAFingerprint)
+                    return false;
+                case 0x23:
+                case 0x09:
+                    propagateEvent(_ScannerEvents.NotFound)
+                    return false;
+                default:
+                    propagateEvent(_ScannerEvents.DirtyScanner)
+                    return false;
+            }
         }
     }
-
-    //% blockId=FingerprintAS608_comm block="Communicate %cmdAndData and receive response as a buffer"
-    //% weight=20
+    /**
+     * Sends command and data to scanner and returns its answer as Buffer
+     * @param cmdAndData command and data to send as number array
+     */
+    //% blockId=FingerprintAS608_comm block="Send $cmdAndData and receive response as Buffer"
+    //% weight=30
+    //% advanced = true
     export function commScanner(cmdAndData: number[]): Buffer {
         packAndSend(PID.CMD, cmdAndData)
         receive()
-        basic.pause(200)
+        basic.pause(pauseMS)
         return respBuf
     }
     /**
-     * Get last full response from the scanner as byte buffer
+     * Last response from the scanner as Buffer
      */
-    //% blockId=FingerprintAS608_lastresp block="last response buffer"
+    //% blockId=FingerprintAS608_lastresp block="Last scanner response"
+    //% weight=20
     //% advanced = true
     export function fingerprintResp(): Buffer {
         return respBuf
@@ -545,7 +605,8 @@ namespace FingerprintAS608 {
     /**
      * Get system parameters from the scanner
      */
-    //% blockId=FingerprintAS608_getparameters block="scanner parameters"
+    //% blockId=FingerprintAS608_getparameters block="Scanner parameters"
+    //% weight=10
     //% advanced = true
     export function getParameters(): Parameters {
         return scannerParameters
