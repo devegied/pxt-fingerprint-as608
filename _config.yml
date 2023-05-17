@@ -2,7 +2,9 @@ makecode:
   target: microbit
   platform: microbit
   home_url: https://makecode.microbit.org/
-theme: jekyll-theme-slate
+theme: jekyll-theme-cayman
+title: Fingerprint scanner (AS608)
+description: Makecode extension for Fingerprint scanner based on AS608 chip
 include:
   - assets
   - README.md

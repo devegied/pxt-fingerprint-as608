@@ -111,8 +111,8 @@ namespace FingerprintAS608 {
         eventHandlers.forEach((th) => { th.onEvent(event) })
     }
     /**
-     * Do something when scanner error event occurs
-     * @param event to be checked, eg: ScannerEvents.E1
+     * Execute commands when scanner error event occurs
+     * @param event to be checked, eg: ScannerEvents.CommunicationError
      * @param handler code to run when the event is raised
      */
     //% blockId=FingerprintAS608_on_event
@@ -455,7 +455,7 @@ namespace FingerprintAS608 {
     }
 
     /**
-     * Delete template from permanent storage
+     * Deletes template from permanent storage
      * returns true if template deleted, false on error
      * @param position of permanent storage to delete from
      */
