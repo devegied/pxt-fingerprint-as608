@@ -76,6 +76,22 @@ namespace FingerprintAS608 {
     /**
      * Parameters from the scanner
      */
+    export const enum ScannerParameters {
+        //% block="Status register"
+        statusRegister,
+        //% block="System identifier code"
+        systemIdentifier,
+        //% block="Finger library size"
+        librarySize,
+        //% block="Security level"
+        securityLevel,
+        //% block="Device address"
+        deviceAddress,
+        //% block="Data packet size code"
+        dataPacketSize,
+        //% block="Baud rate code"
+        serialBaudRate
+    }
     export interface Parameters {
         statusRegister: uint16; //Status register
         systemIdentifier: uint16;//System identifier code
@@ -116,7 +132,7 @@ namespace FingerprintAS608 {
      * @param handler code to run when the event is raised
      */
     //% blockId=FingerprintAS608_on_event
-    //% block="on scanner $event"
+    //% block="on $event"
     //% event.fieldEditor="gridpicker" event.fieldOptions.columns=2
     //% event.fieldOptions.tooltips="true"
     //% weight=65
@@ -197,7 +213,7 @@ namespace FingerprintAS608 {
      * @param rxpin microbit pin where scanner TX pin is connected
      * @param doCommands operations done after connection is established
      */
-    //% blockId=FingerprintAS608_init block="Connect to scanner (RX to $txpin, TX to $rxpin)|| and $doCommands"
+    //% blockId=FingerprintAS608_init block="Connect scanner RX to $txpin, TX to $rxpin|| and $doCommands"
     //% weight=100
     //% txpin.fieldEditor="gridpicker" txpin.fieldOptions.columns=5
     //% rxpin.fieldEditor="gridpicker" rxpin.fieldOptions.columns=5
@@ -379,7 +395,7 @@ namespace FingerprintAS608 {
      * returns true if template stored, false on error
      * @param position of permanent storage to store template
      */
-    //% blockId=FingerprintAS608_store block="Store template in scanner at $position"
+    //% blockId=FingerprintAS608_store block="Store template to $position"
     //% weight=70
     //% advanced = true
     export function store(position: number): boolean {
@@ -409,7 +425,7 @@ namespace FingerprintAS608 {
      * returns true if template stored, false on error
      * @param position of permanent storage to store template
      */
-    //% blockId=FingerprintAS608_autoenroll block="Collect 2 fingerprints and store as template in scanner at $position"
+    //% blockId=FingerprintAS608_autoenroll block="Auto enroll fingerprint to $position"
     //% weight=60
     export function autoEnroll(position: number): boolean {
         packAndSend(PID.CMD, [0x54, 0xFF, 0x02, (position >> 8) & 0xFF, position & 0xFF, 0x00])//AutoEnroll/Autologin (max wait time, two scans, do not allow to store duplicates)
@@ -459,7 +475,7 @@ namespace FingerprintAS608 {
      * returns true if template deleted, false on error
      * @param position of permanent storage to delete from
      */
-    //% blockId=FingerprintAS608_delete block="Delete template from scanner at $position"
+    //% blockId=FingerprintAS608_delete block="Delete template from $position"
     //% weight=50
     export function delTempl(position: number): boolean {
         packAndSend(PID.CMD, [0x0C, (position >> 8) & 0xFF, position & 0xFF, 0x01])//delete single template
@@ -487,7 +503,7 @@ namespace FingerprintAS608 {
      * returns true if match found, false on error or no match
      * @param slot to compare to
      */
-    //% blockId=FingerprintAS608_search block="Search for matched template for characteristic in $slot"
+    //% blockId=FingerprintAS608_search block="Search for match for characteristic in $slot"
     //% slot.defl=FingerprintAS608.Slots.CharBuffer1
     //% weight=50
     //% advanced = true
@@ -517,7 +533,7 @@ namespace FingerprintAS608 {
      * returns true if match found, false on error or no match
      * @param slot to compare to
      */
-    //% blockId=FingerprintAS608_fastsearch block="Fast search for matched template for characteristic in $slot"
+    //% blockId=FingerprintAS608_fastsearch block="Fast search for match for characteristic in $slot"
     //% slot.defl=FingerprintAS608.Slots.CharBuffer1
     //% weight=40
     //% advanced = true
@@ -546,7 +562,7 @@ namespace FingerprintAS608 {
      * Automatic search for matching stored template (scans fingerprint, creates characteristic, searches for match in stored templates)
      * returns true if match found, false on error or no match
      */
-    //% blockId=FingerprintAS608_autosearch block="Collect fingerprint and search for it in stored templates"
+    //% blockId=FingerprintAS608_autosearch block="Auto search fingerprint"
     //% weight=40
     export function autoSearch(): boolean {
         packAndSend(PID.CMD, [0x55, 0xFF, 0x00, 0x00, (scannerParameters.librarySize >> 8) & 0xFF, scannerParameters.librarySize & 0xFF])//autosearch
@@ -583,7 +599,7 @@ namespace FingerprintAS608 {
      * Sends command and data to scanner and returns its answer as Buffer
      * @param cmdAndData command and data to send as number array
      */
-    //% blockId=FingerprintAS608_comm block="Send $cmdAndData and receive response as Buffer"
+    //% blockId=FingerprintAS608_comm block="Send $cmdAndData to scanner"
     //% weight=30
     //% advanced = true
     export function commScanner(cmdAndData: number[]): Buffer {
@@ -603,12 +619,31 @@ namespace FingerprintAS608 {
     }
 
     /**
-     * Get system parameters from the scanner
+     * Get scanner system parameter
+     * @param one of the parameters
      */
-    //% blockId=FingerprintAS608_getparameters block="Scanner parameters"
+    //% blockId=FingerprintAS608_getparameter block="Scanner parameter $parameter"
     //% weight=10
     //% advanced = true
-    export function getParameters(): Parameters {
-        return scannerParameters
+    export function getParameter(parameter:ScannerParameters): number {
+        switch(parameter){
+            case ScannerParameters.statusRegister:
+                return scannerParameters.statusRegister
+            case ScannerParameters.systemIdentifier:
+                return scannerParameters.systemIdentifier
+            case ScannerParameters.deviceAddress:
+                return scannerParameters.deviceAddress
+            case ScannerParameters.librarySize:
+                return scannerParameters.librarySize
+            case ScannerParameters.securityLevel:
+                return scannerParameters.securityLevel
+            case ScannerParameters.dataPacketSize:
+                return scannerParameters.dataPacketSize
+            case ScannerParameters.serialBaudRate:
+                return scannerParameters.serialBaudRate
+            default:
+                return 0
+        }
+        
     }
 }

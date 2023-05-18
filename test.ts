@@ -12,7 +12,7 @@ FingerprintAS608.onEvent(FingerprintAS608.ScannerEvents.Any, function () {
 FingerprintAS608.init(SerialPin.P12, SerialPin.P16, FingerprintAS608.InitCmds.VerifyPasswordAndBacklightOff)
 basic.showNumber(FingerprintAS608.getTemplateCount())
 basic.pause(1000)
-pos = FingerprintAS608.getTemplatePos()
+let pos = FingerprintAS608.getTemplatePos()
 basic.clearScreen()
 for (let value of pos) {
     led.plot(value % 5, Math.idiv(value, 5))

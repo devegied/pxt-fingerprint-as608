@@ -144,16 +144,16 @@ FingerprintAS608.fingerprintResp()
 Returns last scanner answer packet as a Buffer
 
 ```sig
-FingerprintAS608.getParameters()
+FingerprintAS608.getParameter(FingerprintAS608.ScannerParameters.librarySize)
 ```
-Returns scanner system parameters
-  - statusRegister - Status register
-  - systemIdentifier - System identifier code
-  - librarySize - Finger templates library size
-  - securityLevel - Security level
-  - deviceAddress - Device address
-  - dataPacketSize - Maximum data packet size code
-  - serialBaudRate - Serial connection baud rate code
+Returns one of scanner system parameters value:
+  - Status register
+  - System identifier code
+  - Finger templates library size
+  - Security level
+  - Device address
+  - Maximum data packet size code
+  - Serial connection baud rate code
 
 
 ## Blocks preview
@@ -182,7 +182,7 @@ FingerprintAS608.search(FingerprintAS608.Slots.CharBuffer1)
 FingerprintAS608.fastSearch(FingerprintAS608.Slots.CharBuffer1)
 FingerprintAS608.commScanner([0x50])
 FingerprintAS608.fingerprintResp()
-FingerprintAS608.getParameters()
+FingerprintAS608.getParameter(FingerprintAS608.ScannerParameters.librarySize)
 ```
 
 ## License  
