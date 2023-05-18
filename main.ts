@@ -209,8 +209,8 @@ namespace FingerprintAS608 {
 
     /**
      * Connect to fingerprint scanner on indicated pins and do selected operations
-     * @param txpin microbit pin where scanner RX pin is connected
-     * @param rxpin microbit pin where scanner TX pin is connected
+     * @param txpin micro:bit pin where scanner RX pin is connected
+     * @param rxpin micro:bit pin where scanner TX pin is connected
      * @param doCommands operations done after connection is established
      */
     //% blockId=FingerprintAS608_init block="Connect scanner RX to $txpin, TX to $rxpin|| and $doCommands"

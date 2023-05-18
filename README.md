@@ -10,14 +10,14 @@ I think there are several scanners based on AS608 chip with different firmware a
 
 Scanner also works with [Adafruit libraries](https://learn.adafruit.com/adafruit-optical-fingerprint-sensor/) but after a lot of searching on Google for "光学指纹模块 用户手册" (*Optical Fingerprint Module User Manual* in Chinese) I found PDF document with `AutoLogin` and `AutoSearch` commands which combines 7 and 3 basic commands respectively and makes this device more accessible to beginners.
 
-## Using fingerprint scanner with microbit
+## Using fingerprint scanner with micro:bit
 **Important**: Acording to [micro:bit hardware specifications](https://tech.microbit.org/hardware/powersupply/) when v1 board is powered over USB it can provide only 90mA current for connected devices.
-Peek usage current of fingerprint scanner based on AS608 chip can reach 130mA and it means it can not be safely used with v1 board powered over USB.
-Micro:bit v2 board can provide up to 270mA current for external devices when powered over USB and it means it can be safely used with fingerprint scanner.
+Peek current usage of fingerprint scanner based on AS608 chip can reach 130mA and that means it can not be safely used with v1 board powered over USB.
+micro:bit v2 board can provide up to 270mA current for external devices when powered over USB and it can be safely used with fingerprint scanner.
 
 ## Use as Extension
 In your micro:bit [Makecode](https://makecode.microbit.org/) project click on **Extensions** under the gearwheel menu or in toolbox,
-search for **devegied/pxt-fingerprint-as608** and import it.
+search for `devegied/pxt-fingerprint-as608` and import it.
 
 ## Simple API
 ```package
@@ -34,9 +34,9 @@ Execute commands when scanner error event occurs
 FingerprintAS608.init(SerialPin.P1, SerialPin.P2, FingerprintAS608.InitCmds.VerifyPasswordAndBacklightOff)
 ```
 Connect to fingerprint scanner on indicated pins and execute selected commands
-  - txpin microbit pin where scanner RX pin is connected, eg: SerialPin.P1
-  - rxpin microbit pin where scanner TX pin is connected, eg: SerialPin.P2
-  - doCommands operations done after connection is established, eg: FingerprintAS608.InitCmds.VerifyPassword
+  - txpin micro:bit pin where scanner RX pin is connected, eg: SerialPin.P1
+  - rxpin micro:bit pin where scanner TX pin is connected, eg: SerialPin.P2
+  - doCommands operations done after connection is established, eg: FingerprintAS608.InitCmds.VerifyPasswordAndBacklightOff
 
 ```sig
 FingerprintAS608.setLight(true)
