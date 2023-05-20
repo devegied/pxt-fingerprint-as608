@@ -500,98 +500,98 @@ namespace FingerprintAS608 {
 
     /**
      * Search for matching stored template to the generated characteristic
-     * returns true if match found, false on error or no match
+     * returns stored template position if match found, negative integer on error or no match
      * @param slot to compare to
      */
     //% blockId=FingerprintAS608_search block="Search for match for characteristic in $slot"
     //% slot.defl=FingerprintAS608.Slots.CharBuffer1
     //% weight=50
     //% advanced = true
-    export function search(slot: Slots): boolean {
+    export function search(slot: Slots): number {
         packAndSend(PID.CMD, [0x04, slot, 0x0, 0x0, (scannerParameters.librarySize >> 8) & 0xFF, scannerParameters.librarySize & 0xFF])//search finger library
         if (!receive()) {
             propagateEvent(_ScannerEvents.CommunicationError)
             basic.pause(pauseMS)
-            return false;
+            return -2;
         } else {
             basic.pause(pauseMS)
             switch (respBuf[9]) {
                 case 0x0:
-                    return true;
+                    return respBuf.getNumber(NumberFormat.UInt16BE, 10);
                 case 0x1:
                     propagateEvent(_ScannerEvents.CommunicationError)
-                    return false;
+                    return -1;
                 default:
                     propagateEvent(_ScannerEvents.NotFound)
-                    return false;
+                    return -respBuf[9];
             }
         }
     }
 
     /**
      * High speed search for matching stored template to the generated characteristic
-     * returns true if match found, false on error or no match
+     * returns stored template position if match found, negative integer on error or no match
      * @param slot to compare to
      */
     //% blockId=FingerprintAS608_fastsearch block="Fast search for match for characteristic in $slot"
     //% slot.defl=FingerprintAS608.Slots.CharBuffer1
     //% weight=40
     //% advanced = true
-    export function fastSearch(slot: Slots): boolean {
+    export function fastSearch(slot: Slots): number {
         packAndSend(PID.CMD, [0x1B, slot, 0x0, 0x0, (scannerParameters.librarySize >> 8) & 0xFF, scannerParameters.librarySize & 0xFF])//search finger library
         if (!receive()) {
             propagateEvent(_ScannerEvents.CommunicationError)
             basic.pause(pauseMS)
-            return false;
+            return -2;
         } else {
             basic.pause(pauseMS)
             switch (respBuf[9]) {
                 case 0x0:
-                    return true;
+                    return respBuf.getNumber(NumberFormat.UInt16BE, 10);
                 case 0x1:
                     propagateEvent(_ScannerEvents.CommunicationError)
-                    return false;
+                    return -1;
                 default:
                     propagateEvent(_ScannerEvents.NotFound)
-                    return false;
+                    return -respBuf[9];
             }
         }
     }
 
     /**
      * Automatic search for matching stored template (scans fingerprint, creates characteristic, searches for match in stored templates)
-     * returns true if match found, false on error or no match
+     * returns stored template position if match found, negative integer on error or no match
      */
     //% blockId=FingerprintAS608_autosearch block="Auto search fingerprint"
     //% weight=40
-    export function autoSearch(): boolean {
+    export function autoSearch(): number {
         packAndSend(PID.CMD, [0x55, 0xFF, 0x00, 0x00, (scannerParameters.librarySize >> 8) & 0xFF, scannerParameters.librarySize & 0xFF])//autosearch
         if (!receive(16000)) {
             propagateEvent(_ScannerEvents.CommunicationError)
             basic.pause(pauseMS)
-            return false;
+            return -1;
         } else {
             basic.pause(pauseMS)
             switch (respBuf[9]) {
                 case 0x0:
-                    return true;
+                    return respBuf.getNumber(NumberFormat.UInt16BE, 10);
                 case 0x1:
                     propagateEvent(_ScannerEvents.CommunicationError)
-                    return false;
+                    return -1;
                 case 0x2:
                     propagateEvent(_ScannerEvents.FingerNotDetected)
-                    return false;
+                    return -2;
                 case 0x6:
                 case 0x7:
                     propagateEvent(_ScannerEvents.NotAFingerprint)
-                    return false;
+                    return -respBuf[9];
                 case 0x23:
                 case 0x09:
                     propagateEvent(_ScannerEvents.NotFound)
-                    return false;
+                    return -respBuf[9];
                 default:
                     propagateEvent(_ScannerEvents.DirtyScanner)
-                    return false;
+                    return -respBuf[9];
             }
         }
     }

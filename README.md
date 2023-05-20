@@ -83,7 +83,7 @@ Delete template from permanent storage
 FingerprintAS608.autoSearch()
 ```
 Does automatic search for matching stored template (scans fingerprint, creates characteristic, searches for match in stored templates)
-  - returns true if match found, false on error or no match
+  - returns stored template position if match found, negative integer on error or no match
 
 The best results can be obtained when scanner backlight is turened off. Then on execution of this command:
   - backlight turns on when scanner is waiting for the finger
@@ -122,14 +122,14 @@ FingerprintAS608.search(FingerprintAS608.Slots.CharBuffer1)
 ```
 Searches for matching stored template to the generated characteristic
   - slot to compare to
-  - returns true if match found, false on error or no match
+  - returns stored template position if match found, negative integer on error or no match
 
 ```sig
 FingerprintAS608.fastSearch(FingerprintAS608.Slots.CharBuffer1)
 ```
 Performs high speed search for matching stored template to the generated characteristic
   - slot to compare to
-  - returns true if match found, false on error or no match
+  - returns stored template position if match found, negative integer on error or no match
 
 ```sig
 FingerprintAS608.commScanner([0x50])
